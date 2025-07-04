@@ -4,11 +4,13 @@ const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
-      useUnifiedTopology: true
+      useUnifiedTopology: true,
+      useCreateIndex: true,
+      useFindAndModify: false
     });
-    console.log('✅ MongoDB Connected');
+    console.log('✅ تم الاتصال بقاعدة MongoDB بنجاح');
   } catch (err) {
-    console.error('❌ MongoDB Connection Error:', err);
+    console.error('❌ فشل الاتصال بقاعدة البيانات:', err.message);
     process.exit(1);
   }
 };
