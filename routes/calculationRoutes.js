@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const calculationController = require('../controllers/calculationController');
+const { calculateRecommendations } = require('../controllers/calculationController');
 
-// POST /api/calculate
-router.post('/', calculationController.calculateRecommendations);
+router.post('/', calculateRecommendations);
 
 module.exports = router;
