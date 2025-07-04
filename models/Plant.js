@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
 
-const DiseaseSchema = new mongoose.Schema({
+const diseaseSchema = new mongoose.Schema({
   name: {
-    ar: { type: String, required: [true, 'يجب إدخال اسم المرض بالعربية'] },
+    ar: String,
     fr: String,
     en: String
   },
@@ -13,43 +13,95 @@ const DiseaseSchema = new mongoose.Schema({
   treatment: {
     pesticide: {
       ar: String,
-      fr: String
+      fr: String,
+      en: String
     },
     dosage: String,
     application_tips: {
       ar: String,
       fr: String
-    }
+    },
+    frequency: String
   }
 });
 
-const PlantSchema = new mongoose.Schema({
-  name: {
-    ar: { type: String, required: true },
-    fr: { type: String, required: true },
+const fertilizerSchema = new mongoose.Schema({
+  stage: {
+    ar: String,
+    fr: String,
     en: String
   },
-  scientific_name: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  growing_regions: {
-    type: [String],
-    enum: ['الشمال', 'الجنوب', 'الهضاب العليا', 'الساحل'],
-    required: true
-  },
-  diseases: [DiseaseSchema],
-  createdAt: {
-    type: Date,
-    default: Date.now
+  N: String,
+  P: String,
+  K: String,
+  Ca: String,
+  tips: {
+    ar: String,
+    fr: String
   }
-}, {
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true }
 });
 
-// فهرسة للبحث السريع
-PlantSchema.index({ name: 'text', scientific_name: 'text' });
+const pesticideSchema = new mongoose.Schema({
+  active_ingredient: {
+    ar: String,
+    fr: String,
+    en: String
+  },
+  target_disease: {
+    ar: String,
+    fr: String,
+    en: String
+  },
+  dosage: String,
+  safety_period: {
+    ar: String,
+    fr: String,
+    en: String
+  },
+  mixability: {
+    ar: String,
+    fr: String,
+    en: String
+  },
+  bee_toxicity: {
+    ar: String,
+    fr: String,
+    en: String
+  },
+  alternatives: {
+    ar: [String],
+    fr: [String]
+  }
+});
 
-module.exports = mongoose.model('Plant', PlantSchema);
+const plantSchema = new mongoose.Schema({
+  type: {
+    ar: String,
+    fr: String,
+    en: String
+  },
+  name: {
+    ar: String,
+    fr: String,
+    en: String
+  },
+  scientific_name: String,
+  origin: {
+    ar: String,
+    fr: String
+  },
+  growing_regions: [String],
+  diseases: [diseaseSchema],
+  fertilizers: [fertilizerSchema],
+  pesticides: [pesticideSchema],
+  general_tips: {
+    ar: String,
+    fr: String
+  },
+  pruning_tips: {
+    ar: String,
+    fr: String
+  }
+});
+
+module.exports = mongoose.model('Plant', plantSchema);
