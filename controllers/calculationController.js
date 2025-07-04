@@ -1,6 +1,6 @@
 const Plant = require('../models/Plant');
 
-// الدوال الحسابية مباشرة في الـ controller
+// دالة حساب السماد
 const calculateFertilizer = (plant, region, hectares, mode, extraParams) => {
   let results = [];
   
@@ -26,7 +26,6 @@ const calculateFertilizer = (plant, region, hectares, mode, extraParams) => {
     });
   } 
   else if (mode === 'manual') {
-    // معالجة الوضع اليدوي
     if (extraParams && extraParams.manualFertilizer) {
       extraParams.manualFertilizer.forEach(item => {
         const total = {};
@@ -50,6 +49,7 @@ const calculateFertilizer = (plant, region, hectares, mode, extraParams) => {
   return results;
 };
 
+// دالة حساب المبيدات
 const calculatePesticide = (plant, region, hectares, mode, extraParams) => {
   let results = [];
   
@@ -73,7 +73,6 @@ const calculatePesticide = (plant, region, hectares, mode, extraParams) => {
     });
   }
   else if (mode === 'manual') {
-    // معالجة الوضع اليدوي
     if (extraParams && extraParams.manualPesticide) {
       extraParams.manualPesticide.forEach(item => {
         const [amount, unit] = item.dosage.split(' ');
@@ -96,43 +95,66 @@ const calculatePesticide = (plant, region, hectares, mode, extraParams) => {
   return results;
 };
 
-// الدالة الرئيسية
+// الدالة الرئيسية للحسابات
 exports.calculateRecommendations = async (req, res) => {
   try {
     const { plantId, region, hectares, operation, mode, extraParams } = req.body;
     
-    // التحقق من البيانات المطلوبة
+    // التحقق من البيانات المدخلة
     if (!plantId || !region || !hectares || !operation || !mode) {
-      return res.status(400).json({ message: 'بيانات الإدخال ناقصة.' });
+      return res.status(400).json({
+        error: 'بيانات ناقصة',
+        message: 'يرجى تقديم جميع الحقول المطلوبة: plantId, region, hectares, operation, mode'
+      });
     }
     
-    // تحميل بيانات النبات من قاعدة البيانات
+    // جلب بيانات النبات من قاعدة البيانات
     const plant = await Plant.findById(plantId);
     if (!plant) {
-      return res.status(404).json({ message: 'النبات غير موجود.' });
+      return res.status(404).json({
+        error: 'غير موجود',
+        message: 'لم يتم العثور على النبات المحدد'
+      });
     }
     
     let result;
+    const hectaresNum = parseFloat(hectares);
     
-    if (operation === 'fertilizer') {
-      result = calculateFertilizer(plant, region, hectares, mode, extraParams);
-    } else if (operation === 'pesticide') {
-      result = calculatePesticide(plant, region, hectares, mode, extraParams);
-    } else {
-      return res.status(400).json({ message: 'العملية غير معروفة.' });
+    if (isNaN(hectaresNum) || hectaresNum <= 0) {
+      return res.status(400).json({
+        error: 'قيمة غير صالحة',
+        message: 'يجب أن تكون المساحة رقمًا موجبًا'
+      });
     }
     
+    // التوجيه بناءً على نوع العملية
+    if (operation === 'fertilizer') {
+      result = calculateFertilizer(plant, region, hectaresNum, mode, extraParams);
+    } else if (operation === 'pesticide') {
+      result = calculatePesticide(plant, region, hectaresNum, mode, extraParams);
+    } else {
+      return res.status(400).json({
+        error: 'عملية غير معروفة',
+        message: 'نوع العملية المطلوبة غير معروف'
+      });
+    }
+    
+    // الإرجاع بنجاح
     res.status(200).json({
+      success: true,
       plant: plant.name,
-      region,
-      hectares,
       operation,
+      region,
+      hectares: hectaresNum,
       mode,
-      result
+      results: result
     });
     
   } catch (error) {
-    console.error('حدث خطأ في الحساب:', error);
-    res.status(500).json({ message: 'حدث خطأ في الخادم.' });
+    console.error('حدث خطأ في المعالجة:', error);
+    res.status(500).json({
+      error: 'خطأ في الخادم',
+      message: 'حدث خطأ غير متوقع أثناء المعالجة'
+    });
   }
 };
