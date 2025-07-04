@@ -1,30 +1,50 @@
+// utils/calculations.js
+
 // 1. حساب الأسمدة
 exports.calculateFertilizer = (plant, region, hectares, mode, extraParams) => {
   let results = [];
   
   // الوضع التلقائي
   if (mode === 'auto') {
-    plant.fertilizers.forEach(program => {
-      const total = {};
-      
-      // حساب الكمية الإجمالية لكل عنصر
-      Object.entries(program).forEach(([key, value]) => {
-        if (['N', 'P', 'K', 'Ca'].includes(key) && value) {
-          const [amount, unit] = value.split(' ');
+    if (plant.fertilizers) {
+      plant.fertilizers.forEach(program => {
+        const total = {};
+        
+        // حساب الكمية الإجمالية لكل عنصر
+        if (program.N) {
+          const [amount, unit] = program.N.split(' ');
           const totalAmount = (parseFloat(amount) * hectares).toFixed(2);
-          total[key] = `${totalAmount} ${unit}`;
+          total.N = `${totalAmount} ${unit}`;
         }
+        
+        if (program.P) {
+          const [amount, unit] = program.P.split(' ');
+          const totalAmount = (parseFloat(amount) * hectares).toFixed(2);
+          total.P = `${totalAmount} ${unit}`;
+        }
+        
+        if (program.K) {
+          const [amount, unit] = program.K.split(' ');
+          const totalAmount = (parseFloat(amount) * hectares).toFixed(2);
+          total.K = `${totalAmount} ${unit}`;
+        }
+        
+        if (program.Ca) {
+          const [amount, unit] = program.Ca.split(' ');
+          const totalAmount = (parseFloat(amount) * hectares).toFixed(2);
+          total.Ca = `${totalAmount} ${unit}`;
+        }
+        
+        // إضافة النتائج
+        results.push({
+          stage: program.stage,
+          ...total,
+          region,
+          tips: program.tips || plant.general_tips,
+          mode: 'auto'
+        });
       });
-      
-      // إضافة النتائج
-      results.push({
-        stage: program.stage,
-        ...total,
-        region,
-        tips: program.tips,
-        mode: 'auto'
-      });
-    });
+    }
     
     // ترتيب النتائج حسب التكلفة (مثال)
     results.sort((a, b) => {
@@ -39,9 +59,8 @@ exports.calculateFertilizer = (plant, region, hectares, mode, extraParams) => {
     const { element, month } = extraParams;
     
     // البحث عن برنامج يناسب المدخلات
-    const matchingProgram = plant.fertilizers.find(program => 
-      Object.keys(program).includes(element) && 
-      program.stage.ar.includes(month)
+    const matchingProgram = plant.fertilizers?.find(program => 
+      program[element] && program.stage.ar.includes(month)
     );
     
     if (matchingProgram) {
@@ -63,28 +82,31 @@ exports.calculateFertilizer = (plant, region, hectares, mode, extraParams) => {
   return results;
 };
 
-// 2. حساب المبيدات (بنفس النمط)
+// 2. حساب المبيدات
 exports.calculatePesticide = (plant, region, hectares, mode, extraParams) => {
   let results = [];
   
-  if (mode === 'auto') {
+  if (mode === 'auto' && plant.pesticides) {
     plant.pesticides.forEach(pesticide => {
-      const [amount, unit] = pesticide.dosage.split(' ');
-      const totalAmount = (parseFloat(amount) * hectares).toFixed(2);
-      
-      results.push({
-        name: pesticide.active_ingredient,
-        dosage: pesticide.dosage,
-        total: `${totalAmount} ${unit}`,
-        safety_period: pesticide.safety_period,
-        bee_toxicity: pesticide.bee_toxicity,
-        alternatives: pesticide.alternatives,
-        region,
-        mode: 'auto'
-      });
+      if (pesticide.dosage) {
+        const [amount, unit] = pesticide.dosage.split(' ');
+        const totalAmount = (parseFloat(amount) * hectares).toFixed(2);
+        
+        results.push({
+          name: pesticide.active_ingredient,
+          dosage: pesticide.dosage,
+          total: `${totalAmount} ${unit}`,
+          safety_period: pesticide.safety_period,
+          bee_toxicity: pesticide.bee_toxicity,
+          alternatives: pesticide.alternatives,
+          region,
+          mode: 'auto'
+        });
+      }
     });
   } else {
     // تنفيذ المنطق اليدوي
+    // ... (يمكنك إضافة الكود هنا لاحقًا)
   }
   
   return results;
