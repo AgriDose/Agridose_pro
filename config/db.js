@@ -1,16 +1,15 @@
 const mongoose = require('mongoose');
+require('dotenv').config();
 
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI, {
+    await mongoose.connect(process.env.MONGO_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      useCreateIndex: true,
-      useFindAndModify: false
     });
-    console.log('✅ تم الاتصال بقاعدة MongoDB بنجاح');
+    console.log('تم الاتصال بقاعدة البيانات بنجاح');
   } catch (err) {
-    console.error('❌ فشل الاتصال بقاعدة البيانات:', err.message);
+    console.error('فشل الاتصال بقاعدة البيانات:', err.message);
     process.exit(1);
   }
 };
