@@ -1,94 +1,51 @@
 const Plant = require('../models/Plant');
+const asyncHandler = require('../middleware/asyncHandler');
 
-// 1. الحصول على جميع النباتات
-exports.getAllPlants = async (req, res) => {
-  try {
-    const plants = await Plant.find().sort({ createdAt: -1 });
-    res.status(200).json({
-      success: true,
-      count: plants.length,
-      data: plants
-    });
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      error: 'خطأ في الخادم: ' + err.message
-    });
+// @desc    الحصول على جميع النباتات
+// @route   GET /api/plants
+// @access  Public
+exports.getPlants = asyncHandler(async (req, res) => {
+  const { type, region, search } = req.query;
+  
+  let query = {};
+  
+  if (type) {
+    query['type.ar'] = type;
   }
-};
+  
+  if (region) {
+    query.growing_regions = { $in: [region] };
+  }
+  
+  if (search) {
+    query.$or = [
+      { 'name.ar': { $regex: search, $options: 'i' } },
+      { 'name.fr': { $regex: search, $options: 'i' } },
+      { 'scientific_name': { $regex: search, $options: 'i' } }
+    ];
+  }
 
-// 2. الحصول على نباتات حسب النوع
-exports.getPlantsByType = async (req, res) => {
-  try {
-    const type = req.params.type;
-    const plants = await Plant.find({ 'type.ar': type });
-    
-    if (plants.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: `لا توجد نباتات من نوع: ${type}`
-      });
-    }
-    
-    res.status(200).json({
-      success: true,
-      count: plants.length,
-      data: plants
-    });
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      error: 'خطأ في الخادم: ' + err.message
-    });
-  }
-};
+  const plants = await Plant.find(query);
+  
+  res.status(200).json({
+    success: true,
+    count: plants.length,
+    data: plants
+  });
+});
 
-// 3. البحث عن نبات بالاسم
-exports.searchPlants = async (req, res) => {
-  try {
-    const name = req.params.name;
-    const plants = await Plant.find({
-      $or: [
-        { 'name.ar': { $regex: name, $options: 'i' } },
-        { 'name.fr': { $regex: name, $options: 'i' } },
-        { 'name.en': { $regex: name, $options: 'i' } },
-        { scientific_name: { $regex: name, $options: 'i' } }
-      ]
-    });
-    
-    res.status(200).json({
-      success: true,
-      count: plants.length,
-      data: plants
-    });
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      error: 'خطأ في الخادم: ' + err.message
-    });
+// @desc    الحصول على نبات معين
+// @route   GET /api/plants/:id
+// @access  Public
+exports.getPlant = asyncHandler(async (req, res, next) => {
+  const plant = await Plant.findById(req.params.id);
+  
+  if (!plant) {
+    return next(new ErrorResponse(`لم يتم العثور على نبات بالرقم ${req.params.id}`, 404));
   }
-};
-
-// 4. الحصول على نبات بواسطة ID
-exports.getPlantById = async (req, res) => {
-  try {
-    const plant = await Plant.findById(req.params.id);
-    
-    if (!plant) {
-      return res.status(404).json({
-        success: false,
-        error: 'لم يتم العثور على النبات'
-      });
-    }
-    
-    res.status(200).json({
-      success: true,
-      data: plant
-    });
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      error: 'خطأ في الخادم: ' + err.message
-    });
-  }
-};
+  
+  res.status(200).json({
+    success: true,
+    data: plant
+  });
+});
