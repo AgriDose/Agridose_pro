@@ -1,160 +1,88 @@
 const Plant = require('../models/Plant');
+const asyncHandler = require('../middleware/asyncHandler');
+const { calculateFertilizer, calculatePesticide } = require('../utils/calculations');
 
-// دالة حساب السماد
-const calculateFertilizer = (plant, region, hectares, mode, extraParams) => {
-  let results = [];
+// @desc    حساب جرعة الأسمدة (وضع تلقائي)
+// @route   POST /api/calculate/fertilizer/auto
+// @access  Public
+exports.calculateAutoFertilizer = asyncHandler(async (req, res) => {
+  const { plantId, hectares, region } = req.body;
   
-  if (mode === 'auto' && plant.fertilizers) {
-    plant.fertilizers.forEach(program => {
-      const total = {};
-      
-      ['N', 'P', 'K', 'Ca'].forEach(element => {
-        if (program[element]) {
-          const [amount, unit] = program[element].split(' ');
-          const totalAmount = (parseFloat(amount) * hectares).toFixed(2);
-          total[element] = `${totalAmount} ${unit}`;
-        }
-      });
-      
-      results.push({
-        stage: program.stage,
-        ...total,
-        region,
-        tips: program.tips || plant.general_tips,
-        mode: 'auto'
-      });
+  const plant = await Plant.findById(plantId);
+  if (!plant) {
+    return res.status(404).json({
+      success: false,
+      message: 'لم يتم العثور على النبتة'
     });
-  } 
-  else if (mode === 'manual') {
-    if (extraParams && extraParams.manualFertilizer) {
-      extraParams.manualFertilizer.forEach(item => {
-        const total = {};
-        Object.keys(item.elements).forEach(element => {
-          const [amount, unit] = item.elements[element].split(' ');
-          const totalAmount = (parseFloat(amount) * hectares).toFixed(2);
-          total[element] = `${totalAmount} ${unit}`;
-        });
-        
-        results.push({
-          stage: item.stage,
-          ...total,
-          region,
-          tips: item.tips || plant.general_tips,
-          mode: 'manual'
-        });
-      });
-    }
   }
   
-  return results;
-};
+  const programs = plant.fertilizers.map(fertilizer => {
+    return calculateFertilizer(fertilizer, hectares, region);
+  });
+  
+  // ترتيب البرامج من الأغلى إلى الأرخص (مثال)
+  programs.sort((a, b) => b.estimatedCost - a.estimatedCost);
+  
+  res.status(200).json({
+    success: true,
+    data: {
+      programs,
+      generalTips: plant.general_tips,
+      regionalTips: getRegionalTips(region)
+    }
+  });
+});
 
-// دالة حساب المبيدات
-const calculatePesticide = (plant, region, hectares, mode, extraParams) => {
-  let results = [];
+// @desc    حساب جرعة الأدوية (وضع تلقائي)
+// @route   POST /api/calculate/pesticide/auto
+// @access  Public
+exports.calculateAutoPesticide = asyncHandler(async (req, res) => {
+  const { plantId, diseaseName, hectares } = req.body;
   
-  if (mode === 'auto' && plant.pesticides) {
-    plant.pesticides.forEach(pesticide => {
-      if (pesticide.dosage) {
-        const [amount, unit] = pesticide.dosage.split(' ');
-        const totalAmount = (parseFloat(amount) * hectares).toFixed(2);
-        
-        results.push({
-          name: pesticide.active_ingredient,
-          dosage: pesticide.dosage,
-          total: `${totalAmount} ${unit}`,
-          safety_period: pesticide.safety_period,
-          bee_toxicity: pesticide.bee_toxicity,
-          alternatives: pesticide.alternatives,
-          region,
-          mode: 'auto'
-        });
-      }
+  const plant = await Plant.findById(plantId);
+  if (!plant) {
+    return res.status(404).json({
+      success: false,
+      message: 'لم يتم العثور على النبتة'
     });
   }
-  else if (mode === 'manual') {
-    if (extraParams && extraParams.manualPesticide) {
-      extraParams.manualPesticide.forEach(item => {
-        const [amount, unit] = item.dosage.split(' ');
-        const totalAmount = (parseFloat(amount) * hectares).toFixed(2);
-        
-        results.push({
-          name: item.name,
-          dosage: item.dosage,
-          total: `${totalAmount} ${unit}`,
-          safety_period: item.safety_period || 'غير محدد',
-          bee_toxicity: item.bee_toxicity || 'غير محدد',
-          alternatives: item.alternatives || [],
-          region,
-          mode: 'manual'
-        });
-      });
-    }
+  
+  const disease = plant.diseases.find(d => d.name.ar === diseaseName || d.name.fr === diseaseName);
+  if (!disease) {
+    return res.status(404).json({
+      success: false,
+      message: 'لم يتم العثور على المرض'
+    });
   }
   
-  return results;
-};
+  const result = calculatePesticide(disease.treatment, hectares);
+  
+  res.status(200).json({
+    success: true,
+    data: {
+      ...result,
+      safetyPeriod: disease.treatment.safety_period,
+      beeToxicity: disease.treatment.bee_toxicity,
+      applicationTips: disease.treatment.application_tips
+    }
+  });
+});
 
-// الدالة الرئيسية للحسابات
-exports.calculateRecommendations = async (req, res) => {
-  try {
-    const { plantId, region, hectares, operation, mode, extraParams } = req.body;
-    
-    // التحقق من البيانات المدخلة
-    if (!plantId || !region || !hectares || !operation || !mode) {
-      return res.status(400).json({
-        error: 'بيانات ناقصة',
-        message: 'يرجى تقديم جميع الحقول المطلوبة: plantId, region, hectares, operation, mode'
-      });
+// وظائف مساعدة
+function getRegionalTips(region) {
+  const tips = {
+    north: {
+      ar: "المنطقة الشمالية: ينصح بالري المعتدل وتجنب الإفراط في التسميد النيتروجيني",
+      fr: "Région nord: Irrigation modérée recommandée, éviter l'excès d'engrais azotés"
+    },
+    south: {
+      ar: "المنطقة الجنوبية: ينصح بالري بالتنقيط وتوفير الظل للنباتات الحساسة",
+      fr: "Région sud: Irrigation goutte à goutte recommandée, ombrage pour les plantes sensibles"
     }
-    
-    // جلب بيانات النبات من قاعدة البيانات
-    const plant = await Plant.findById(plantId);
-    if (!plant) {
-      return res.status(404).json({
-        error: 'غير موجود',
-        message: 'لم يتم العثور على النبات المحدد'
-      });
-    }
-    
-    let result;
-    const hectaresNum = parseFloat(hectares);
-    
-    if (isNaN(hectaresNum) || hectaresNum <= 0) {
-      return res.status(400).json({
-        error: 'قيمة غير صالحة',
-        message: 'يجب أن تكون المساحة رقمًا موجبًا'
-      });
-    }
-    
-    // التوجيه بناءً على نوع العملية
-    if (operation === 'fertilizer') {
-      result = calculateFertilizer(plant, region, hectaresNum, mode, extraParams);
-    } else if (operation === 'pesticide') {
-      result = calculatePesticide(plant, region, hectaresNum, mode, extraParams);
-    } else {
-      return res.status(400).json({
-        error: 'عملية غير معروفة',
-        message: 'نوع العملية المطلوبة غير معروف'
-      });
-    }
-    
-    // الإرجاع بنجاح
-    res.status(200).json({
-      success: true,
-      plant: plant.name,
-      operation,
-      region,
-      hectares: hectaresNum,
-      mode,
-      results: result
-    });
-    
-  } catch (error) {
-    console.error('حدث خطأ في المعالجة:', error);
-    res.status(500).json({
-      error: 'خطأ في الخادم',
-      message: 'حدث خطأ غير متوقع أثناء المعالجة'
-    });
-  }
-};
+  };
+  
+  return tips[region] || {
+    ar: "نصائح عامة: اتبع تعليمات الجرعات بدقة وحافظ على التوازن الغذائي",
+    fr: "Conseils généraux: Suivez les doses recommandées et maintenez l'équilibre nutritionnel"
+  };
+}
