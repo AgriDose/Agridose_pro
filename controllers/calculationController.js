@@ -1,6 +1,6 @@
 const Plant = require('../models/Plant');
 
-// انقل دوال الحساب هنا بدلًا من الاستيراد
+// الدوال الحسابية مباشرة في الـ controller
 const calculateFertilizer = (plant, region, hectares, mode, extraParams) => {
   let results = [];
   
@@ -96,7 +96,7 @@ const calculatePesticide = (plant, region, hectares, mode, extraParams) => {
   return results;
 };
 
-// تصدير الدالة الرئيسية كما هي
+// الدالة الرئيسية
 exports.calculateRecommendations = async (req, res) => {
   try {
     const { plantId, region, hectares, operation, mode, extraParams } = req.body;
