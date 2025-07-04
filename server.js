@@ -1,4 +1,4 @@
-require('dotenv').config(); // تحميل متغيرات البيئة أولاً
+require('dotenv').config();
 const path = require('path');
 const fs = require('fs');
 
@@ -8,7 +8,7 @@ const calculationRoutes = require('./routes/calculationRoutes');
 
 const app = express();
 
-// 1. التحقق من وجود متغيرات البيئة
+// 1. التحقق من متغيرات البيئة
 console.log('🔍 التحقق من متغيرات البيئة:');
 console.log('MONGODB_URI:', process.env.MONGODB_URI ? 'تم التعرف عليه' : 'غير معروف');
 console.log('PORT:', process.env.PORT || '5000 (افتراضي)');
@@ -20,7 +20,7 @@ try {
   fs.readdirSync(__dirname).forEach(file => {
     console.log(`├── ${file}`);
     
-    // إذا كان مجلداً، اعرض محتوياته
+    // عرض محتويات المجلدات الفرعية
     const filePath = path.join(__dirname, file);
     if (fs.statSync(filePath).isDirectory()) {
       fs.readdirSync(filePath).forEach(subFile => {
@@ -38,17 +38,15 @@ const envPath = path.join(__dirname, '.env');
 console.log('مسار .env:', envPath);
 console.log('هل الملف موجود؟', fs.existsSync(envPath) ? '✅ نعم' : '❌ لا');
 
-// 4. الاتصال الآمن بقاعدة البيانات
+// 4. الاتصال الآمن بقاعدة البيانات (بدون useUnifiedTopology)
 const connectToDB = async () => {
   try {
     if (!process.env.MONGODB_URI) {
       throw new Error('❌ MONGODB_URI غير معرّف في ملف .env');
     }
 
-    await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true
-    });
+    // استخدام اتصال مبسط بدون خيارات deprecated
+    await mongoose.connect(process.env.MONGODB_URI);
     
     console.log('✅ تم الاتصال بقاعدة البيانات بنجاح');
   } catch (error) {
@@ -58,10 +56,7 @@ const connectToDB = async () => {
     try {
       // اتصال احتياطي بقاعدة بيانات محلية
       const localURI = 'mongodb://localhost:27017/agridose';
-      await mongoose.connect(localURI, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true
-      });
+      await mongoose.connect(localURI);
       
       console.log('✅ تم الاتصال بقاعدة البيانات المحلية بنجاح');
     } catch (localError) {
