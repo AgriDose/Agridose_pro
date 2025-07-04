@@ -1,13 +1,12 @@
 const express = require('express');
+const {
+  calculateAutoFertilizer,
+  calculateAutoPesticide
+} = require('../controllers/calculationController');
+
 const router = express.Router();
-const { calculateRecommendations } = require('../controllers/calculationController');
 
-// POST /api/calculate
-router.post('/', calculateRecommendations);
-
-// GET /api/calculate/test (لأغراض الاختبار)
-router.get('/test', (req, res) => {
-  res.json({ message: 'نظام الحسابات يعمل بشكل صحيح!' });
-});
+router.post('/fertilizer/auto', calculateAutoFertilizer);
+router.post('/pesticide/auto', calculateAutoPesticide);
 
 module.exports = router;
