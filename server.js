@@ -1,105 +1,59 @@
 require('dotenv').config();
-const path = require('path');
-const fs = require('fs');
-
 const express = require('express');
 const mongoose = require('mongoose');
+const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const mongoSanitize = require('express-mongo-sanitize');
+const hpp = require('hpp');
+const xss = require('xss-clean');
+
+// Routes
+const plantRoutes = require('./routes/plantRoutes');
 const calculationRoutes = require('./routes/calculationRoutes');
+const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
+const PORT = process.env.PORT || 5000;
 
-// 1. التحقق من متغيرات البيئة
-console.log('🔍 التحقق من متغيرات البيئة:');
-console.log('MONGODB_URI:', process.env.MONGODB_URI ? 'تم التعرف عليه' : 'غير معروف');
-console.log('PORT:', process.env.PORT || '5000 (افتراضي)');
+// 1. Middlewares الأساسية
+app.use(helmet());
+app.use(cors());
+app.use(express.json({ limit: '10kb' }));
 
-// 2. التحقق من هيكل الملفات
-console.log('\n📂 هيكل المجلد الحالي:', __dirname);
-console.log('📝 محتويات المجلد:');
-try {
-  fs.readdirSync(__dirname).forEach(file => {
-    console.log(`├── ${file}`);
-    
-    // عرض محتويات المجلدات الفرعية
-    const filePath = path.join(__dirname, file);
-    if (fs.statSync(filePath).isDirectory()) {
-      fs.readdirSync(filePath).forEach(subFile => {
-        console.log(`│   ├── ${subFile}`);
-      });
-    }
-  });
-} catch (error) {
-  console.error('❌ خطأ في قراءة المجلد:', error.message);
-}
+// 2. حماية ضد هجمات API
+app.use(mongoSanitize());
+app.use(xss());
+app.use(hpp());
 
-// 3. التحقق من وجود ملف .env
-console.log('\n🔍 التحقق من وجود ملف .env:');
-const envPath = path.join(__dirname, '.env');
-console.log('مسار .env:', envPath);
-console.log('هل الملف موجود؟', fs.existsSync(envPath) ? '✅ نعم' : '❌ لا');
+// 3. Rate Limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: 'لقد تجاوزت عدد الطلبات المسموح بها، يرجى المحاولة لاحقاً'
+});
+app.use('/api', limiter);
 
-// 4. الاتصال الآمن بقاعدة البيانات (بدون useUnifiedTopology)
-const connectToDB = async () => {
-  try {
-    if (!process.env.MONGODB_URI) {
-      throw new Error('❌ MONGODB_URI غير معرّف في ملف .env');
-    }
+// 4. الاتصال بقاعدة البيانات
+mongoose.connect(process.env.MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+}).then(() => console.log('✅ تم الاتصال بقاعدة البيانات بنجاح'));
 
-    // استخدام اتصال مبسط بدون خيارات deprecated
-    await mongoose.connect(process.env.MONGODB_URI);
-    
-    console.log('✅ تم الاتصال بقاعدة البيانات بنجاح');
-  } catch (error) {
-    console.error('❌ فشل الاتصال بقاعدة البيانات:', error.message);
-    console.log('🛠️ جرب استخدام سلسلة اتصال محلية مؤقتاً...');
-    
-    try {
-      // اتصال احتياطي بقاعدة بيانات محلية
-      const localURI = 'mongodb://localhost:27017/agridose';
-      await mongoose.connect(localURI);
-      
-      console.log('✅ تم الاتصال بقاعدة البيانات المحلية بنجاح');
-    } catch (localError) {
-      console.error('❌ فشل الاتصال بقاعدة البيانات المحلية:', localError.message);
-      console.log('💡 الحلول الممكنة:');
-      console.log('1. تأكد من تشغيل خادم MongoDB محلياً');
-      console.log('2. تحقق من صحة سلسلة الاتصال في ملف .env');
-      console.log('3. تأكد من أن MongoDB يعمل على المنفذ 27017');
-    }
-  }
-};
-
-connectToDB();
-
-// 5. إعدادات الخادم الأساسية
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// 6. تعريف المسارات
+// 5. Routes
+app.use('/api/plants', plantRoutes);
 app.use('/api/calculate', calculationRoutes);
 
-// 7. تعريف مسار الصحة للتحقق من عمل الخادم
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'active',
-    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    timestamp: new Date()
-  });
+// 6. معالجة الأخطاء
+app.use(errorHandler);
+
+// 7. بدء الخادم
+const server = app.listen(PORT, () => {
+  console.log(`🚀 الخادم يعمل على المنفذ ${PORT}`);
 });
 
-// 8. معالجة الأخطاء العامة
-app.use((err, req, res, next) => {
-  console.error('❌ خطأ غير متوقع:', err.stack);
-  res.status(500).json({
-    error: 'خطأ في الخادم',
-    message: 'حدث خطأ غير متوقع'
-  });
-});
-
-// 9. تشغيل الخادم
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`\n🚀 الخادم يعمل على: http://localhost:${PORT}`);
-  console.log('🔍 يمكنك اختبار الخادم عن طريق:');
-  console.log(`curl http://localhost:${PORT}/health`);
+// معالجة الأخطاء غير الملتقطة
+process.on('unhandledRejection', (err) => {
+  console.error('❌ خطأ غير معالج:', err);
+  server.close(() => process.exit(1));
 });
