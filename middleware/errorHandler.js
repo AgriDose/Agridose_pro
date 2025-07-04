@@ -1,16 +1,15 @@
 const errorHandler = (err, req, res, next) => {
-  console.error(err.stack);
+  // تسجيل الخطأ للأغراض التنقيحية
+  console.error(`[${new Date().toISOString()}]`, err);
 
-  const statusCode = err.statusCode || 500;
-  const message = err.message || 'حدث خطأ في الخادم';
+  // حالة الخطأ المخصصة
+  const status = err.statusCode || 500;
+  const message = status === 500 ? 'خطأ في الخادم الداخلي' : err.message;
 
-  res.status(statusCode).json({
+  res.status(status).json({
     success: false,
-    error: {
-      code: statusCode,
-      message: message,
-      details: process.env.NODE_ENV === 'development' ? err.stack : undefined
-    }
+    error: message,
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   });
 };
 
