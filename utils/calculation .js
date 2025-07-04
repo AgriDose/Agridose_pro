@@ -1,46 +1,63 @@
-class CalculationService {
-  static calculateFertilizer(plant, area, options = {}) {
-    const { stage, element } = options;
-    let results = [];
-    
-    plant.fertilizers.forEach(fert => {
-      if ((!stage || fert.stage.ar === stage) && 
-          (!element || fert[element])) {
-        
-        const calculated = {};
-        ['N', 'P', 'K', 'Ca'].forEach(nutrient => {
-          if (fert[nutrient]) {
-            const [value, unit] = fert[nutrient].split(' ');
-            calculated[nutrient] = `${(parseFloat(value) * area).toFixed(2)} ${unit}`;
-          }
-        });
-        
-        results.push({
-          stage: fert.stage,
-          ...calculated,
-          tips: fert.tips.ar
-        });
-      }
-    });
-    
-    return results;
-  }
-
-  static calculatePesticide(plant, area, diseaseName) {
-    const disease = plant.diseases.find(d => d.name.ar === diseaseName);
-    if (!disease) return null;
-    
-    const [value, unit] = disease.treatment.dosage.split(' ');
-    const total = (parseFloat(value) * area;
-    
+// حساب جرعة السماد
+exports.calculateFertilizer = (fertilizer, hectares, region) => {
+  const calculateElement = (element) => {
+    if (!element) return null;
+    const value = parseFloat(element.split(' ')[0]);
     return {
-      disease: disease.name,
-      pesticide: disease.treatment.pesticide,
-      dosage: `${value} ${unit}/هكتار`,
-      total: `${total.toFixed(2)} ${unit}`,
-      application: disease.treatment.application_tips.ar
+      amount: (value * hectares).toFixed(2),
+      unit: element.split(' ')[1]
     };
-  }
-}
+  };
+  
+  return {
+    stage: fertilizer.stage,
+    N: calculateElement(fertilizer.N),
+    P: calculateElement(fertilizer.P),
+    K: calculateElement(fertilizer.K),
+    Ca: calculateElement(fertilizer.Ca),
+    tips: fertilizer.tips,
+    estimatedCost: estimateCost(fertilizer, hectares, region)
+  };
+};
 
-module.exports = CalculationService;
+// حساب جرعة المبيد
+exports.calculatePesticide = (treatment, hectares) => {
+  const dosagePerHectare = parseFloat(treatment.dosage.split(' ')[0]);
+  const unit = treatment.dosage.split(' ')[1];
+  
+  return {
+    pesticide: treatment.pesticide,
+    dosagePerHectare: treatment.dosage,
+    totalAmount: (dosagePerHectare * hectares).toFixed(2) + ' ' + unit,
+    frequency: treatment.frequency || 'حسب الحاجة'
+  };
+};
+
+// تقدير التكلفة (مثال مبسط)
+function estimateCost(fertilizer, hectares, region) {
+  // هذه قيم تقديرية، يجب استبدالها بقيم حقيقية
+  const priceMap = {
+    N: { north: 150, south: 180, center: 160 },
+    P: { north: 200, south: 220, center: 210 },
+    K: { north: 180, south: 200, center: 190 }
+  };
+  
+  let total = 0;
+  
+  if (fertilizer.N) {
+    const nValue = parseFloat(fertilizer.N.split(' ')[0]);
+    total += nValue * hectares * priceMap.N[region];
+  }
+  
+  if (fertilizer.P) {
+    const pValue = parseFloat(fertilizer.P.split(' ')[0]);
+    total += pValue * hectares * priceMap.P[region];
+  }
+  
+  if (fertilizer.K) {
+    const kValue = parseFloat(fertilizer.K.split(' ')[0]);
+    total += kValue * hectares * priceMap.K[region];
+  }
+  
+  return total;
+}
