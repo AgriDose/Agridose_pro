@@ -1,47 +1,56 @@
 const Plant = require('../models/Plant');
 const asyncHandler = require('../middleware/asyncHandler');
 
-// @desc    الحصول على جميع النباتات
-// @route   GET /api/plants
+// @desc    الحصول على جميع أنواع النباتات
+// @route   GET /api/plants/types
 // @access  Public
-exports.getPlants = asyncHandler(async (req, res) => {
-  const { type, region, search } = req.query;
-  
-  let query = {};
-  
-  if (type) {
-    query['type.ar'] = type;
-  }
-  
-  if (region) {
-    query.growing_regions = { $in: [region] };
-  }
-  
-  if (search) {
-    query.$or = [
-      { 'name.ar': { $regex: search, $options: 'i' } },
-      { 'name.fr': { $regex: search, $options: 'i' } },
-      { 'scientific_name': { $regex: search, $options: 'i' } }
-    ];
-  }
-
-  const plants = await Plant.find(query);
+exports.getPlantTypes = asyncHandler(async (req, res) => {
+  const plants = await Plant.find({});
+  const types = [...new Set(plants.map(p => p.type.ar))];
   
   res.status(200).json({
     success: true,
-    count: plants.length,
-    data: plants
+    data: types
   });
 });
 
-// @desc    الحصول على نبات معين
-// @route   GET /api/plants/:id
+// @desc    الحصول على الأصناف حسب النوع
+// @route   GET /api/plants/:type
 // @access  Public
-exports.getPlant = asyncHandler(async (req, res, next) => {
+exports.getPlantsByType = asyncHandler(async (req, res) => {
+  const type = req.params.type;
+  
+  const plants = await Plant.find({});
+  const filteredPlants = plants.filter(p => p.type.ar === type);
+  
+  if (!filteredPlants.length) {
+    return res.status(404).json({
+      success: false,
+      message: 'لم يتم العثور على نباتات من هذا النوع'
+    });
+  }
+  
+  res.status(200).json({
+    success: true,
+    data: filteredPlants.map(p => ({
+      id: p._id,
+      name: p.name,
+      scientific_name: p.scientific_name
+    }))
+  });
+});
+
+// @desc    الحصول على تفاصيل نبتة محددة
+// @route   GET /api/plants/details/:id
+// @access  Public
+exports.getPlantDetails = asyncHandler(async (req, res) => {
   const plant = await Plant.findById(req.params.id);
   
   if (!plant) {
-    return next(new ErrorResponse(`لم يتم العثور على نبات بالرقم ${req.params.id}`, 404));
+    return res.status(404).json({
+      success: false,
+      message: 'لم يتم العثور على النبتة'
+    });
   }
   
   res.status(200).json({
