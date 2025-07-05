@@ -1,41 +1,187 @@
 const mongoose = require('mongoose');
-const Plant = require('./models/Plant');
-const fs = require('fs');
-const path = require('path');
-require('dotenv').config();
+const AgriDoseData = require('./models/AgriDoseModel'); // تأكد من إنشاء هذا المودل
 
-// 1. الاتصال بقاعدة البيانات
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => console.log('✅ Connected to MongoDB'))
-.catch(err => console.error('❌ Connection error:', err));
-
-// 2. قراءة ملف البيانات
-const dataPath = path.join(__dirname, 'database', 'Agridose_data_full.json');
-const rawData = fs.readFileSync(dataPath);
-const agriData = JSON.parse(rawData);
-
-// 3. وظيفة استيراد البيانات
-const importData = async () => {
-  try {
-    // حذف البيانات القديمة
-    await Plant.deleteMany({});
-    console.log('🗑️ Old data deleted');
+const agriData = {
+  "plants": [
+    // ===== الحبوب =====
+    {
+      "id": "cereal-1",
+      "type": { "ar": "الحبوب", "fr": "Céréales", "en": "Cereals" },
+      "name": { "ar": "قمح صلب - مغربية 117", "fr": "Blé dur Marocaine 117", "en": "Durum Wheat Marocaine 117" },
+      "scientific_name": "Triticum durum",
+      "origin": { "ar": "مغربي - متأقلم مع الجزائر", "fr": "Marocain - adapté à l'Algérie" },
+      "growing_regions": ["سطيف", "تيارت", "معسكر"],
+      "diseases": [
+        {
+          "name": { "ar": "صدأ الساق الأسود", "fr": "Rouille noire", "en": "Black Stem Rust" },
+          "symptoms": {
+            "ar": "بثور سوداء على الساق",
+            "fr": "Pustules noires sur la tige"
+          },
+          "treatment": {
+            "pesticide": { "ar": "توباز 100 EC", "fr": "Topaz 100 EC" },
+            "dosage": "0.5 لتر/هـ",
+            "application_tips": {
+              "ar": "الرش عند أول ظهور للمرض",
+              "fr": "Pulvériser à la première apparition"
+            }
+          }
+        }
+      ],
+      "fertilizers": [
+        {
+          "stage": { "ar": "الإنبات", "fr": "Germination", "en": "Germination" },
+          "N": "20 كغ/هـ",
+          "P": "30 كغ/هـ",
+          "tips": {
+            "ar": "يضاف مع أول رية بعد الزراعة",
+            "fr": "À appliquer avec la première irrigation"
+          }
+        }
+      ],
+      "pesticides": [
+        {
+          "active_ingredient": { "ar": "تريازول", "fr": "Triazole", "en": "Triazole" },
+          "target_disease": { "ar": "الأصداء", "fr": "Rouilles", "en": "Rusts" },
+          "dosage": "0.75 لتر/هـ",
+          "safety_period": { "ar": "30 يوم", "fr": "30 jours", "en": "30 days" },
+          "mixability": { "ar": "قابل للخلط", "fr": "Mélangeable", "en": "Mixable" },
+          "bee_toxicity": { "ar": "منخفض", "fr": "Faible", "en": "Low" }
+        }
+      ],
+      "general_tips": {
+        "ar": "الزراعة في نوفمبر للحصول على أفضل إنتاجية",
+        "fr": "Semer en novembre pour un meilleur rendement"
+      }
+    },
     
-    // استيراد النباتات
-    await Plant.insertMany(agriData.plants);
-    console.log(`🌱 Imported ${agriData.plants.length} plants successfully`);
+    // ===== الخضروات =====
+    {
+      "id": "vegetable-1",
+      "type": { "ar": "الخضروات", "fr": "Légumes", "en": "Vegetables" },
+      "name": { "ar": "طماطم - ريوجين", "fr": "Tomate Rio Grande", "en": "Rio Grande Tomato" },
+      "scientific_name": "Solanum lycopersicum",
+      "diseases": [
+        {
+          "name": { "ar": "ذبابة الطماطم", "fr": "Mouche de la tomate", "en": "Tomato Leaf Miner" },
+          "treatment": {
+            "pesticide": { "ar": "سبينوساد", "fr": "Spinosad", "en": "Spinosad" },
+            "dosage": "0.3 لتر/هـ",
+            "frequency": "كل 10 أيام"
+          }
+        }
+      ],
+      "fertilizers": [
+        {
+          "stage": { "ar": "الإثمار", "fr": "Fructification", "en": "Fruiting" },
+          "N": "15 كغ/هـ",
+          "K": "25 كغ/هـ",
+          "Ca": "10 كغ/هـ",
+          "tips": {
+            "ar": "تجنب التسميد أثناء الحرارة الشديدة",
+            "fr": "Éviter la fertilisation pendant les fortes chaleurs"
+          }
+        }
+      ],
+      "pesticides": [
+        {
+          "active_ingredient": { "ar": "إيميداكلوبريد", "fr": "Imidaclopride", "en": "Imidacloprid" },
+          "dosage": "0.4 لتر/هـ",
+          "safety_period": { "ar": "14 يوم", "fr": "14 jours", "en": "14 days" },
+          "bee_toxicity": { "ar": "عالي", "fr": "Élevé", "en": "High" },
+          "alternatives": {
+            "ar": ["بيريثرينات طبيعية", "زيوت نيم"],
+            "fr": ["Pyréthrines naturelles", "Huile de neem"]
+          }
+        }
+      ]
+    },
     
-    // إغلاق الاتصال
-    mongoose.connection.close();
-    console.log('🔌 MongoDB connection closed');
-  } catch (error) {
-    console.error('❌ Import error:', error);
-    process.exit(1);
-  }
+    // ===== الأشجار المثمرة =====
+    {
+      "id": "tree-1",
+      "type": { "ar": "الأشجار المثمرة", "fr": "Arbres fruitiers", "en": "Fruit Trees" },
+      "name": { "ar": "زيتون - شملالي", "fr": "Olive Chemlal", "en": "Chemlal Olive" },
+      "scientific_name": "Olea europaea",
+      "diseases": [
+        {
+          "name": { "ar": "عين الطاووس", "fr": "Œil de paon", "en": "Peacock Spot" },
+          "treatment": {
+            "pesticide": { "ar": "أوكسي كلور النحاس", "fr": "Oxyde cuivreux", "en": "Copper Oxychloride" },
+            "dosage": "3 كغ/هـ",
+            "application_period": { "ar": "الخريف والربيع", "fr": "Automne et printemps" }
+          }
+        }
+      ],
+      "fertilizers": [
+        {
+          "stage": { "ar": "ما بعد القطاف", "fr": "Post-récolte", "en": "Post-harvest" },
+          "P": "40 كغ/هـ",
+          "K": "30 كغ/هـ",
+          "tips": {
+            "ar": "يساعد على تحسين إنتاج الموسم التالي",
+            "fr": "Améliore la production de la saison suivante"
+          }
+        }
+      ],
+      "pruning_tips": {
+        "ar": "تقليم خفيف سنوياً للحفاظ على شكل الشجرة",
+        "fr": "Taille légère annuelle pour maintenir la forme"
+      }
+    }
+  ],
+
+  "agricultural_zones": {
+    "north": {
+      "crops": { "ar": "الحبوب، الكروم، الحمضيات", "fr": "Céréales, vignes, agrumes" },
+      "soil_tips": {
+        "ar": "التربة الطينية تحتاج تصريف جيد",
+        "fr": "Les sols argileux nécessitent un bon drainage"
+      }
+    },
+    "south": {
+      "crops": { "ar": "النخيل، الخضروات المبكرة", "fr": "Palmiers, légumes primeurs" },
+      "irrigation_tips": {
+        "ar": "الري بالتنقيط موصى به لتوفير المياه",
+        "fr": "L'irrigation goutte à goutte est recommandée"
+      }
+    }
+  },
+
+  "research_sources": [
+    {
+      "name": { "ar": "المعهد الوطني للبحث الزراعي", "fr": "Institut National de la Recherche Agronomique" },
+      "acronym": "INRAA",
+      "specialties": {
+        "ar": "تربية النبات، وقاية المزروعات",
+        "fr": "Amélioration des plantes, protection des cultures"
+      }
+    }
+  ]
 };
 
-// 4. استدعاء الوظيفة
-importData();
+async function seedDatabase() {
+  try {
+    // الاتصال بقاعدة البيانات
+    await mongoose.connect('mongodb://localhost:27017/agridose', {
+      useNewUrlParser: true,
+      useUnifiedTopology: true
+    });
+
+    // حذف البيانات القديمة
+    await AgriDoseData.deleteMany();
+    console.log('تم مسح البيانات القديمة بنجاح');
+
+    // إضافة البيانات الجديدة
+    await AgriDoseData.create(agriData);
+    console.log('تمت إضافة البيانات بنجاح');
+
+    // إغلاق الاتصال
+    mongoose.connection.close();
+  } catch (error) {
+    console.error('حدث خطأ أثناء عملية البذرة:', error);
+    process.exit(1);
+  }
+}
+
+seedDatabase();
