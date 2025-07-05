@@ -5,6 +5,7 @@ import cors from 'cors';
 import plantRoutes from './routes/plantRoutes.js';
 import calculationRoutes from './routes/calculationRoutes.js';
 
+// تهيئة البيئة
 dotenv.config();
 
 // إصلاح مشكلة الإغلاق المفاجئ
@@ -12,32 +13,30 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// اتصال MongoDB مع معالجة الأخطاء المحسنة
+// اتصال MongoDB مع معالجة الأخطاء
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 30000, // زيادة وقت الانتظار
-      socketTimeoutMS: 45000
+      serverSelectionTimeoutMS: 5000
     });
-    console.log('✅ تم الاتصال بـ MongoDB');
+    console.log('✅ تم الاتصال بقاعدة البيانات');
   } catch (err) {
     console.error('❌ فشل الاتصال:', err.message);
-    process.exit(1); // إغلاق مع رمز خطأ
+    process.exit(1);
   }
 };
 
-// مسارات API
+// المسارات الأساسية
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'active', timestamp: new Date() });
+});
+
 app.use('/api/plants', plantRoutes);
 app.use('/api/calculate', calculationRoutes);
 
-// نقطة فحص الصحة
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'active' });
-});
-
-// تشغيل الخادم بعد الاتصال بقاعدة البيانات
+// تشغيل الخادم بعد الاتصال
 connectDB().then(() => {
   const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => {
@@ -45,7 +44,7 @@ connectDB().then(() => {
   });
 });
 
-// معالجة الأخطاء غير الملتقطة
+// معالجة الأخطاء غير المتوقعة
 process.on('unhandledRejection', (err) => {
-  console.error('خطأ غير معالج:', err);
+  console.error('حدث خطأ غير متوقع:', err);
 });
