@@ -1,11 +1,11 @@
-import express from 'express';
+const express = require('express');
+const {
+  calculateAutoFertilizer,
+  calculateAutoPesticide
+} = require('../controllers/calculationController');
 const router = express.Router();
 
-router.post('/fertilizer', (req, res) => {
-  res.json({
-    message: 'حساب الأسمدة',
-    formula: 'NPK'
-  });
-});
+router.post('/fertilizer/auto', calculateAutoFertilizer);
+router.post('/pesticide/auto', calculateAutoPesticide);
 
-export default router; // التصدير الموحد
+module.exports = router;
