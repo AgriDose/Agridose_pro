@@ -18,13 +18,16 @@ app.use('/api/calculate', calculationRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'active' });
+  res.json({ 
+    status: 'active',
+    db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+  });
 });
 
-// DB Connection
+// DB Connection + Server Start
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    app.listen(PORT, () => console.log(`🌱 Server running on port ${PORT}`));
   })
-  .catch(err => console.error('DB connection failed:', err));
+  .catch(err => console.error('❌ DB connection failed:', err));
