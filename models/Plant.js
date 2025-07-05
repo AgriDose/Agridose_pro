@@ -1,107 +1,57 @@
 const mongoose = require('mongoose');
-
-const diseaseSchema = new mongoose.Schema({
-  name: {
-    ar: String,
-    fr: String,
-    en: String
-  },
-  symptoms: {
-    ar: String,
-    fr: String
-  },
-  treatment: {
-    pesticide: {
-      ar: String,
-      fr: String,
-      en: String
-    },
-    dosage: String,
-    application_tips: {
-      ar: String,
-      fr: String
-    },
-    frequency: String
-  }
-});
-
-const fertilizerSchema = new mongoose.Schema({
-  stage: {
-    ar: String,
-    fr: String,
-    en: String
-  },
-  N: String,
-  P: String,
-  K: String,
-  Ca: String,
-  tips: {
-    ar: String,
-    fr: String
-  }
-});
-
-const pesticideSchema = new mongoose.Schema({
-  active_ingredient: {
-    ar: String,
-    fr: String,
-    en: String
-  },
-  target_disease: {
-    ar: String,
-    fr: String,
-    en: String
-  },
-  dosage: String,
-  safety_period: {
-    ar: String,
-    fr: String,
-    en: String
-  },
-  mixability: {
-    ar: String,
-    fr: String,
-    en: String
-  },
-  bee_toxicity: {
-    ar: String,
-    fr: String,
-    en: String
-  },
-  alternatives: {
-    ar: [String],
-    fr: [String]
-  }
-});
+const validator = require('validator');
 
 const plantSchema = new mongoose.Schema({
   type: {
-    ar: String,
-    fr: String,
-    en: String
+    type: String,
+    required: [true, 'Plant type is required'],
+    enum: ['خضر', 'حبوب', 'أشجار مثمرة']
   },
-  name: {
-    ar: String,
-    fr: String,
-    en: String
+  variety: {
+    type: String,
+    required: [true, 'Variety is required'],
+    trim: true,
+    maxlength: [50, 'Variety name cannot exceed 50 characters']
   },
-  scientific_name: String,
-  origin: {
-    ar: String,
-    fr: String
+  region: {
+    type: String,
+    enum: ['north', 'center', 'south'],
+    required: [true, 'Region is required']
   },
-  growing_regions: [String],
-  diseases: [diseaseSchema],
-  fertilizers: [fertilizerSchema],
-  pesticides: [pesticideSchema],
-  general_tips: {
-    ar: String,
-    fr: String
-  },
-  pruning_tips: {
-    ar: String,
-    fr: String
+  fertilizerPrograms: [
+    {
+      name: String,
+      npkRatio: String,
+      dosagePerHectare: Number,
+      applicationMethod: String,
+      months: [Number],
+      pricePerKg: Number
+    }
+  ],
+  diseases: [
+    {
+      name: String,
+      pesticides: [
+        {
+          name: String,
+          activeIngredient: String,
+          dosagePerHectare: Number,
+          toxicity: {
+            bees: String,
+            humans: String
+          },
+          mixingCompatibility: [String]
+        }
+      ]
+    }
+  ],
+  createdAt: {
+    type: Date,
+    default: Date.now
   }
 });
+
+// فهرسة للبحث السريع
+plantSchema.index({ type: 1, variety: 1, region: 1 });
 
 module.exports = mongoose.model('Plant', plantSchema);
