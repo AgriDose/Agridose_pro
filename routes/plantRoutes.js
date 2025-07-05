@@ -2,7 +2,10 @@ import express from 'express';
 const router = express.Router();
 
 router.get('/', (req, res) => {
-  res.json({ message: 'Plants endpoint' });
+  res.json({ 
+    message: 'قائمة النباتات',
+    data: []
+  });
 });
 
-export default router;  // التصدير بهذه الطريقة
+export default router; // التصدير الموحد
