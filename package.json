@@ -6,15 +6,15 @@
   "scripts": {
     "start": "node server.js",
     "build": "npm install && echo 'Backend build completed'",
-    "dev": "nodemon server.js",
-    "seed": "node database/seeds.js"
+    "dev": "nodemon server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
     "mongoose": "^7.4.3",
     "dotenv": "^16.3.1",
     "cors": "^2.8.5",
-    "helmet": "^7.0.0"
+    "helmet": "^7.0.0",
+    "express-rate-limit": "^6.7.0"  // ⬅️ الحزمة المفقودة
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
