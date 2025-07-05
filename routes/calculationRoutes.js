@@ -1,12 +1,11 @@
-const express = require('express');
-const {
-  calculateAutoFertilizer,
-  calculateAutoPesticide
-} = require('../controllers/calculationController');
-
+import express from 'express';
 const router = express.Router();
 
-router.post('/fertilizer/auto', calculateAutoFertilizer);
-router.post('/pesticide/auto', calculateAutoPesticide);
+router.post('/fertilizer', (req, res) => {
+  res.json({
+    message: 'حساب الأسمدة',
+    formula: 'NPK'
+  });
+});
 
-module.exports = router;
+export { router as calculationRoutes };
