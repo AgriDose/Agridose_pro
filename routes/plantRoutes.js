@@ -1,14 +1,11 @@
-const express = require('express');
-const {
-  getPlantTypes,
-  getPlantsByType,
-  getPlantDetails
-} = require('../controllers/plantController');
-
+import express from 'express';
 const router = express.Router();
 
-router.get('/types', getPlantTypes);
-router.get('/:type', getPlantsByType);
-router.get('/details/:id', getPlantDetails);
+router.get('/', (req, res) => {
+  res.json({ 
+    message: 'قائمة النباتات',
+    data: []
+  });
+});
 
-module.exports = router;
+export { router as plantRoutes };
