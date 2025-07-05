@@ -1,22 +1,16 @@
-# التبعيات
-node_modules/
-
-# البيئة
+# ملفات البيئة
 .env
-.env.local
+*.env
 
-# سجلات النظام
+# الاعتماديات
+node_modules/
+package-lock.json
+
+# السجلات
 *.log
 logs/
 
-# إعدادات IDE
+# إعدادات المطور
+.DS_Store
 .idea/
 .vscode/
-
-# ملفات نظام التشغيل
-.DS_Store
-Thumbs.db
-
-# ملفات البناء
-dist/
-build/
