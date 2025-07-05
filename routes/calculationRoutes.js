@@ -1,8 +1,11 @@
 import express from 'express';
 const router = express.Router();
 
-router.post('/', (req, res) => {
-  res.json({ message: 'Calculation endpoint' });
+router.post('/fertilizer', (req, res) => {
+  res.json({
+    message: 'حساب الأسمدة',
+    formula: 'NPK'
+  });
 });
 
-export default router;  // التصدير بهذه الطريقة
+export default router; // التصدير الموحد
