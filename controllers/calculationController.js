@@ -1,88 +1,107 @@
 const Plant = require('../models/Plant');
 const asyncHandler = require('../middleware/asyncHandler');
-const { calculateFertilizer, calculatePesticide } = require('../utils/calculations');
+const ErrorResponse = require('../utils/ErrorResponse');
 
-// @desc    حساب جرعة الأسمدة (وضع تلقائي)
-// @route   POST /api/calculate/fertilizer/auto
+// @desc    حساب جرعات الأسمدة (وضع تلقائي)
+// @route   POST /api/calculations/fertilizer/auto
 // @access  Public
-exports.calculateAutoFertilizer = asyncHandler(async (req, res) => {
-  const { plantId, hectares, region } = req.body;
-  
-  const plant = await Plant.findById(plantId);
-  if (!plant) {
-    return res.status(404).json({
-      success: false,
-      message: 'لم يتم العثور على النبتة'
-    });
+exports.calculateAutoFertilizer = asyncHandler(async (req, res, next) => {
+  const { type, variety, region, hectares } = req.body;
+
+  // التحقق من المدخلات
+  if (!type || !variety || !region || !hectares || hectares <= 0) {
+    return next(new ErrorResponse('Invalid input data', 400));
   }
+
+  const plant = await Plant.findOne({ type, variety });
   
-  const programs = plant.fertilizers.map(fertilizer => {
-    return calculateFertilizer(fertilizer, hectares, region);
-  });
+  if (!plant) {
+    return next(new ErrorResponse('Plant not found', 404));
+  }
+
+  // تصفية برامج التسمية حسب المنطقة
+  const programs = plant.fertilizerPrograms.filter(p => p.region === region);
   
-  // ترتيب البرامج من الأغلى إلى الأرخص (مثال)
-  programs.sort((a, b) => b.estimatedCost - a.estimatedCost);
-  
+  if (programs.length === 0) {
+    return next(new ErrorResponse('No fertilizer programs found for this region', 404));
+  }
+
+  // حساب الكميات الإجمالية
+  const results = programs.map(program => ({
+    name: program.name,
+    npkRatio: program.npkRatio,
+    dosagePerHectare: program.dosagePerHectare,
+    totalQuantity: (program.dosagePerHectare * hectares).toFixed(2),
+    applicationMethod: program.applicationMethod,
+    priceEstimate: (program.pricePerKg * program.dosagePerHectare * hectares).toFixed(2),
+    suitableMonths: program.months
+  }));
+
+  // ترتيب من الأغلى إلى الأرخص
+  results.sort((a, b) => b.priceEstimate - a.priceEstimate);
+
   res.status(200).json({
     success: true,
     data: {
-      programs,
-      generalTips: plant.general_tips,
-      regionalTips: getRegionalTips(region)
+      plant: `${type} - ${variety}`,
+      region,
+      hectares,
+      results
     }
   });
 });
 
-// @desc    حساب جرعة الأدوية (وضع تلقائي)
-// @route   POST /api/calculate/pesticide/auto
+// @desc    حساب جرعات الأدوية (وضع تلقائي)
+// @route   POST /api/calculations/pesticide/auto
 // @access  Public
-exports.calculateAutoPesticide = asyncHandler(async (req, res) => {
-  const { plantId, diseaseName, hectares } = req.body;
+exports.calculateAutoPesticide = asyncHandler(async (req, res, next) => {
+  const { type, variety, diseaseNames, hectares } = req.body;
+
+  // التحقق من المدخلات
+  if (!type || !variety || !diseaseNames || !Array.isArray(diseaseNames) || 
+      diseaseNames.length === 0 || !hectares || hectares <= 0) {
+    return next(new ErrorResponse('Invalid input data', 400));
+  }
+
+  const plant = await Plant.findOne({ type, variety });
   
-  const plant = await Plant.findById(plantId);
   if (!plant) {
-    return res.status(404).json({
-      success: false,
-      message: 'لم يتم العثور على النبتة'
-    });
+    return next(new ErrorResponse('Plant not found', 404));
   }
+
+  // البحث عن الأمراض المطلوبة
+  const diseases = plant.diseases.filter(d => 
+    diseaseNames.includes(d.name)
+  );
   
-  const disease = plant.diseases.find(d => d.name.ar === diseaseName || d.name.fr === diseaseName);
-  if (!disease) {
-    return res.status(404).json({
-      success: false,
-      message: 'لم يتم العثور على المرض'
-    });
+  if (diseases.length === 0) {
+    return next(new ErrorResponse('No matching diseases found', 404));
   }
+
+  // تجميع جميع المبيدات المقترحة
+  const allPesticides = diseases.flatMap(d => d.pesticides);
   
-  const result = calculatePesticide(disease.treatment, hectares);
-  
+  // إزالة التكرارات
+  const uniquePesticides = Array.from(new Set(allPesticides.map(p => p.name)))
+    .map(name => allPesticides.find(p => p.name === name));
+
+  // حساب الكميات الإجمالية
+  const results = uniquePesticides.map(pesticide => ({
+    name: pesticide.name,
+    activeIngredient: pesticide.activeIngredient,
+    dosagePerHectare: pesticide.dosagePerHectare,
+    totalQuantity: (pesticide.dosagePerHectare * hectares).toFixed(2),
+    toxicity: pesticide.toxicity,
+    mixingCompatibility: pesticide.mixingCompatibility
+  }));
+
   res.status(200).json({
     success: true,
     data: {
-      ...result,
-      safetyPeriod: disease.treatment.safety_period,
-      beeToxicity: disease.treatment.bee_toxicity,
-      applicationTips: disease.treatment.application_tips
+      plant: `${type} - ${variety}`,
+      diseases: diseaseNames,
+      hectares,
+      results
     }
   });
 });
-
-// وظائف مساعدة
-function getRegionalTips(region) {
-  const tips = {
-    north: {
-      ar: "المنطقة الشمالية: ينصح بالري المعتدل وتجنب الإفراط في التسميد النيتروجيني",
-      fr: "Région nord: Irrigation modérée recommandée, éviter l'excès d'engrais azotés"
-    },
-    south: {
-      ar: "المنطقة الجنوبية: ينصح بالري بالتنقيط وتوفير الظل للنباتات الحساسة",
-      fr: "Région sud: Irrigation goutte à goutte recommandée, ombrage pour les plantes sensibles"
-    }
-  };
-  
-  return tips[region] || {
-    ar: "نصائح عامة: اتبع تعليمات الجرعات بدقة وحافظ على التوازن الغذائي",
-    fr: "Conseils généraux: Suivez les doses recommandées et maintenez l'équilibre nutritionnel"
-  };
-}
