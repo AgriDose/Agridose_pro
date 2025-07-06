@@ -1,13 +1,13 @@
 {
   "name": "agridose-backend",
   "version": "1.0.0",
-  "description": "Backend for AgriDose Application",
+  "description": "Backend لتطبيق AgriDose",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "build": "npm install",
     "dev": "nodemon server.js",
-    "seed": "node database/seeds.js"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "express": "^4.18.2",
@@ -15,8 +15,7 @@
     "dotenv": "^16.3.1",
     "cors": "^2.8.5",
     "helmet": "^7.0.0",
-    "express-rate-limit": "^6.7.0",
-    "morgan": "^1.10.0"
+    "express-rate-limit": "^6.7.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
