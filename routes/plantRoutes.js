@@ -1,13 +1,14 @@
 const express = require('express');
+const router = express.Router();
 const {
   getPlantTypes,
-  getPlantVarieties,
-  getPlantDetails
+  getPlantVarieties
 } = require('../controllers/plantController');
-const router = express.Router();
 
+// GET /api/plants/types
 router.get('/types', getPlantTypes);
+
+// GET /api/plants/varieties/:type
 router.get('/varieties/:type', getPlantVarieties);
-router.get('/details/:type/:variety', getPlantDetails);
 
 module.exports = router;
