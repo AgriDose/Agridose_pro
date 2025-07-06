@@ -5,15 +5,11 @@ const connectDB = async () => {
     await mongoose.connect(process.env.MONGO_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      retryWrites: true,
-      w: 'majority',
-      serverSelectionTimeoutMS: 5000, // زيادة وقت الانتظار
-      socketTimeoutMS: 45000 // زيادة وقت المهلة
+      serverSelectionTimeoutMS: 5000
     });
-    console.log('✅ تم الاتصال بـ MongoDB بنجاح');
+    console.log('MongoDB Connected');
   } catch (err) {
-    console.error('❌ فشل الاتصال بـ MongoDB:', err.message);
-    process.exit(1); // إيقاف التطبيق إذا فشل الاتصال
+    console.error('MongoDB Connection Error:', err.message);
   }
 };
 
