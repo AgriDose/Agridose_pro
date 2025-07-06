@@ -1,40 +1,19 @@
 const Plant = require('../models/Plant');
-const asyncHandler = require('../middleware/asyncHandler');
-const ErrorResponse = require('../utils/ErrorResponse');
 
-// @desc    الحصول على جميع أنواع النباتات
-// @route   GET /api/plants/types
-// @access  Public
-exports.getPlantTypes = asyncHandler(async (req, res, next) => {
-  const types = await Plant.distinct('type');
-  res.status(200).json({ success: true, data: types });
-});
-
-// @desc    الحصول على الأصناف حسب النوع
-// @route   GET /api/plants/varieties/:type
-// @access  Public
-exports.getPlantVarieties = asyncHandler(async (req, res, next) => {
-  const { type } = req.params;
-  
-  if (!['خضر', 'حبوب', 'أشجار مثمرة'].includes(type)) {
-    return next(new ErrorResponse('Invalid plant type', 400));
+exports.getPlantTypes = async (req, res) => {
+  try {
+    const types = await Plant.distinct('type');
+    res.json({ types });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
+};
 
-  const varieties = await Plant.distinct('variety', { type });
-  res.status(200).json({ success: true, data: varieties });
-});
-
-// @desc    الحصول على تفاصيل صنف معين
-// @route   GET /api/plants/details/:type/:variety
-// @access  Public
-exports.getPlantDetails = asyncHandler(async (req, res, next) => {
-  const { type, variety } = req.params;
-
-  const plant = await Plant.findOne({ type, variety });
-  
-  if (!plant) {
-    return next(new ErrorResponse('Plant variety not found', 404));
+exports.getPlantVarieties = async (req, res) => {
+  try {
+    const varieties = await Plant.find({ type: req.params.type }).distinct('variety');
+    res.json({ varieties });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-
-  res.status(200).json({ success: true, data: plant });
-});
+};
