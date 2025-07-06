@@ -1,39 +1,45 @@
 require('dotenv').config();
 const express = require('express');
-const mongoose = require('mongoose');
+const connectDB = require('./config/db');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const cors = require('cors');
-const morgan = require('morgan');
 
-// الاتصال بقاعدة البيانات
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('✅ Connected to MongoDB'))
-  .catch(err => console.error('❌ MongoDB connection error:', err));
-
-// إعداد التطبيق
+// تهيئة التطبيق
 const app = express();
 
-// Middlewares
+// Middlewares الأساسية
 app.use(helmet());
 app.use(cors());
-app.use(morgan('dev'));
 app.use(express.json());
 
 // Rate Limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 دقيقة
-  max: 100 // 100 طلب لكل IP
+  max: 100 // حد 100 طلب لكل IP
 });
 app.use(limiter);
 
-// Routes
+// الاتصال بقاعدة البيانات
+connectDB();
+
+// Route الأساسي
 app.get('/', (req, res) => {
-  res.send('🌱 AgriDose Backend is Running');
+  res.json({ 
+    status: 'يعمل',
+    message: '🌱 AgriDose Backend يعمل بنجاح',
+    db_connection: mongoose.connection.readyState === 1 ? 'متصل' : 'غير متصل'
+  });
+});
+
+// التعامل مع الأخطاء
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'حدث خطأ في الخادم' });
 });
 
 // تشغيل الخادم
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 الخادم يعمل على المنفذ ${PORT}`);
 });
